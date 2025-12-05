@@ -97,6 +97,8 @@ st.markdown("""
 </table>
 """, unsafe_allow_html=True)
 
+st.markdown("**:violet-badge[You are NOT ALLOWED to add a 'TOTAL' column or a 'TOTAL' row!]**")
+
 st.markdown("###### Description:")
 st.markdown(
     """
@@ -243,8 +245,6 @@ st.markdown(
     """,
     unsafe_allow_html=True
 )
-
-st.markdown("**:violet-badge[Unlike the 'TCO Comparison by Year' menu, you are NOT allowed to add a TOTAL column as the last column!]**")
 
 st.divider()
 
