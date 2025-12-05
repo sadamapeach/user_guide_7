@@ -97,8 +97,6 @@ st.markdown("""
 </table>
 """, unsafe_allow_html=True)
 
-st.markdown("**:violet-badge[You are NOT ALLOWED to add a 'TOTAL' column or a 'TOTAL' row!]**")
-
 st.markdown("###### Description:")
 st.markdown(
     """
@@ -246,6 +244,58 @@ st.markdown(
     unsafe_allow_html=True
 )
 
+st.markdown("**:blue-badge[4. TOTAL COLUMN & TOTAL ROW]**")
+st.markdown(
+    """
+        <div style="text-align: justify; font-size: 15px; margin-bottom: 10px; margin-top:-10px;">
+            You are not allowed to add a
+            <span style="font-weight: 700;">TOTAL COLUMN</span> or
+            <span style="font-weight: 700;">TOTAL ROW</span>!
+            Please refer to the example table below:
+        </div>
+    """,
+    unsafe_allow_html=True
+)
+
+# DataFrame
+columns = ["Scope", "Vendor A", "Vendor B", "Vendor C", "TOTAL"]
+data = [
+    ["WP1", "1.000", "2.000", "3.000", "6.000"],
+    ["WP2", "4.800", "5.000", "5.200", "15.000"],
+    ["TOTAL", "5.800", "7.000", "8.200", "21.000"],
+]
+df = pd.DataFrame(data, columns=columns)
+
+def red_highlight(row):
+    styles = [""] * len(row)
+
+    # Highlight ROW "TOTAL"
+    if row["Scope"] == "TOTAL":
+        styles = ["color: #FF4D4D;" for _ in row]
+    else:
+        # Highlight COLUMN "TOTAL"
+        total_col_index = row.index.get_loc("TOTAL")
+        styles[total_col_index] = "color: #FF4D4D;"
+
+    return styles
+
+df_styled = df.style.apply(red_highlight, axis=1)
+
+st.dataframe(df_styled, hide_index=True)
+
+st.markdown(
+    """
+        <div style="text-align: justify; font-size: 15px; margin-bottom: 20px; margin-top: -5px;">
+            The table above is an 
+            <span style="color: #FF69B4; font-weight: 700;">incorrect example</span> and is 
+            <span style="color: #FF69B4; font-weight: 700;">not permitted</span>! 
+            If you add it, the system will treat it as a regular row and include it in the calculations.
+        </div>
+    """,
+    unsafe_allow_html=True
+)
+
+
 st.divider()
 
 st.markdown("#### What is Displayed?")
@@ -275,7 +325,7 @@ def release_the_balloons():
 st.download_button(
     label="Dummy Dataset",
     data=file_data,
-    file_name="dummy dataset.xlsx",
+    file_name="Dummy Dataset - Standard Deviation.xlsx",
     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     on_click=release_the_balloons,
     type="primary",
@@ -495,7 +545,7 @@ if selected_sheets:
     st.download_button(
         label="Download",
         data=excel_bytes,
-        file_name="super botton.xlsx",
+        file_name="Super Botton - Standard Deviation.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         type="primary",
         use_container_width=True,
