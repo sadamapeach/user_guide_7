@@ -82,7 +82,7 @@ st.markdown(
 )
 
 # Dataframe
-columns = ["Scope", "Vendor A", "Vendor B", "Vendor C", "Vendor D", "Vendor E"]
+columns = ["Scope", "Desc", "Vendor A", "Vendor B", "Vendor C", "Vendor D", "Vendor E"]
 df = pd.DataFrame([[""] * len(columns) for _ in range(3)], columns=columns)
 
 st.dataframe(df, hide_index=True)
@@ -103,7 +103,7 @@ st.markdown(
     <div style="font-size:15px;">
         <ul>
             <li>
-                <span style="display:inline-block; width:100px;">Scope</span>: non-numeric column
+                <span style="display:inline-block; width:100px;">Scope & Desc</span>: non-numeric columns
             </li>
             <li>
                 <span style="display:inline-block; width:100px;">Vendor A - E</span>: numeric columns
@@ -118,14 +118,9 @@ st.markdown(
     """
         <div style="text-align: justify; font-size: 15px; margin-bottom: 20px">
             The system accommodates a 
-            <span style="font-weight: bold;">dynamic table</span>, but it is 
-            <span style="color: #FF69B4; font-weight: 500;">ONLY APPLICABLE</span> to 
-            <span style="color: #FF69B4; font-weight: 500;">numeric columns</span>. Unlike other menus, 
-            <span style="background:#FFCB09; padding:2px 4px; border-radius:6px; font-weight:600; font-size: 0.75rem; color: black">NON-NUMERIC COLUMN</span> is permitted 
-            <span style="color: #ED1C24; font-weight: bold;">ONLY ONCE</span> and 
-            <span style="color: #ED1C24; font-weight: bold;">MUST</span> be placed in the first column.
-            Also, users have the freedom to name the columns as they wish. The system logic relies on 
-            <span style="font-weight: bold;">column indices</span>, not specific column names.
+            <span style="font-weight: bold;">dynamic table</span>, allowing users to enter any number of non-numeric
+            and numeric columns. Users have the freedom to name the columns as they wish. The system logic relies on 
+            <span style="font-weight: bold;"> column indices</span>, not specific column names.
         </div>
     """,
     unsafe_allow_html=True 
@@ -158,7 +153,7 @@ st.markdown(
 st.markdown(
     """
         <div style="text-align: center; font-size: 15px; margin-bottom: 10px; font-weight: bold">
-            Non-Numeric Column (only one) → Numeric Columns
+            Non-Numeric Columns → Numeric Columns
         </div>
     """,
     unsafe_allow_html=True
@@ -338,7 +333,7 @@ data = [
 ]
 df_rank_dev = pd.DataFrame(data, columns=columns)
 
-df_rank_dev_styled = df_rank_dev.style.applymap(highlight_0_percent)
+df_rank_dev_styled = df_rank_dev.style.map(highlight_0_percent)
 st.dataframe(df_rank_dev_styled, hide_index=True)
 
 st.write("")
