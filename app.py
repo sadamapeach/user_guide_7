@@ -22,18 +22,38 @@ def format_rupiah(x):
             formatted = formatted[:-3]
     return formatted
 
-def highlight_0_percent(val):
+def format_rupiah_percent(x):
+    if pd.isna(x):
+        return ""                   # hilangkan None / NaN
+    return f"{format_rupiah(x)}%"   # pakai format_rupiah + %
+
+def highlight_min_cell(row):
+    styles = []
+    
+    # Cari nilai minimum, abaikan NaN
+    numeric_vals = row[row.apply(lambda x: isinstance(x, (int, float)))]
+    if not numeric_vals.empty:
+        min_val = numeric_vals.min()
+    else:
+        min_val = None
+
+    # Buat style per cell
+    for val in row:
+        if val == min_val:
+            styles.append("background-color: #C6EFCE; color: #006100;")
+        else:
+            styles.append("")
+    return styles
+
+st.markdown(
     """
-    Highlight sel yang nilainya 0% atau setara (0, 0%, 0,00%).
-    """
-    s = str(val).replace(",", ".").strip()
+    <div style="font-size:1.75rem; font-weight:700; margin-bottom:9px">
+        🧑‍🏫 User Guide: Standard Deviation
+    </div>
+    """,
+    unsafe_allow_html=True
+)
 
-    # Normalisasi dan cek apakah bernilai nol
-    is_zero = s in ["0", "0%", "0.0", "0.00", "0.000", "0.0%"]
-
-    return "background-color: #D9EAD3; color: #1A5E20; font-weight: 600;" if is_zero else ""
-
-st.subheader("🧑‍🏫 User Guide: Standard Deviation")
 st.markdown(
     ":red-badge[Indosat] :orange-badge[Ooredoo] :green-badge[Hutchison]"
 )
@@ -377,13 +397,21 @@ st.markdown(
 # DataFrame
 columns = ["Scope", "Vendor A", "Vendor B", "Vendor C"]
 data = [
-    ["WP1", "0%", "27,35%", "27,39%"],
-    ["WP2", "22,57%", "0%", "0,07%"],
-    ["WP3", "130,10%", "66,56%", "0%"],
+    ["WP1", 0, 27.35, 27.39],
+    ["WP2", 22.57, 0, 0.07],
+    ["WP3", 130.1, 66.56, 0],
 ]
-df_rank_dev = pd.DataFrame(data, columns=columns)
 
-df_rank_dev_styled = df_rank_dev.style.map(highlight_0_percent)
+df_rank_dev = pd.DataFrame(data, columns=columns)
+num_cols = df_rank_dev.select_dtypes(include=["number"]).columns
+format_dict = {col: format_rupiah_percent for col in num_cols}
+
+df_rank_dev_styled = (
+    df_rank_dev.style
+    .format(format_dict)
+    .apply(highlight_min_cell, axis=1)
+)
+
 st.dataframe(df_rank_dev_styled, hide_index=True)
 
 st.write("")
@@ -399,19 +427,27 @@ st.markdown(
 )
 
 # DataFrame
-columns = ["Scope", "1st Rank", "Best Price", "2nd Rank", "Dev.2nd to 1st (%)", "3rd Rank", "Dev.3rd to 1st (%)"]
+columns = ["Scope", "1st Rank", "Best Price", "2nd Rank", "Dev. 2nd to 1st (%)", "3rd Rank", "Dev. 3rd to 1st (%)"]
 data = [
-    ["WP1", "Vendor A", 10310, "Vendor B", "27,35%", "Vendor C", "27,39%"],
-    ["WP2", "Vendor B", 14242, "Vendor C", "0,07%", "Vendor A", "22,57%"],
-    ["WP3", "Vendor C", 3242, "Vendor B", "66,56%", "Vendor A", "130,10%"],
+    ["WP1", "Vendor A", 10310, "Vendor B", 27.35, "Vendor C", 27.39],
+    ["WP2", "Vendor B", 14242, "Vendor C", 0.07, "Vendor A", 22.57],
+    ["WP3", "Vendor C", 3242, "Vendor B", 66.56, "Vendor A", 130.1],
 ]
-df_sum_dev = pd.DataFrame(data, columns=columns)
 
-num_cols = ["Best Price"]
-df_sum_dev_styled = (
-    df_sum_dev.style
-    .format({col: format_rupiah for col in num_cols})
-)
+df_sum_dev = pd.DataFrame(data, columns=columns)
+format_dict = {}
+
+# Kolom "Best Price"
+if "Best Price" in df_sum_dev.columns:
+    format_dict["Best Price"] = format_rupiah
+
+# Kolom deviasi (%)
+for col in df_sum_dev.columns:
+    if col.startswith("Dev. ") and col.endswith("(%)"):
+        format_dict[col] = format_rupiah_percent
+
+df_sum_dev_styled = df_sum_dev.style.format(format_dict)
+
 st.dataframe(df_sum_dev_styled, hide_index=True)
 
 st.write("")
@@ -463,22 +499,6 @@ selected_sheets = st.multiselect(
     default=list(dataframes.keys())  # default semua dipilih
 )
 
-# --- Highlight 0% ---
-def is_zero_percent(val):
-    """
-    Mengembalikan True jika val adalah nilai 0% (0, 0%, 0.0%, 0,00%, dsb.)
-    """
-    if pd.isna(val):
-        return False
-
-    s = str(val).replace(",", ".").replace("%", "").strip()
-
-    try:
-        return float(s) == 0.0
-    except:
-        return False
-
-
 def generate_multi_sheet_excel(selected_sheets, df_dict):
     output = BytesIO()
 
@@ -486,54 +506,98 @@ def generate_multi_sheet_excel(selected_sheets, df_dict):
         for sheet in selected_sheets:
             df = df_dict[sheet].copy()
 
-            # CASE: RANK-1 DEV (%)
+            # ========= SPECIAL SHEET =========
             if sheet == "Rank-1 Deviation (%)":
-
                 df_to_write = df.copy()
-                df_to_write.to_excel(writer, index=False, sheet_name=sheet)
+                numeric_cols = [
+                    c for c in df_to_write.columns
+                    if pd.api.types.is_numeric_dtype(df_to_write[c])
+                ]
 
+                df_to_write.to_excel(writer, index=False, sheet_name=sheet)
                 workbook  = writer.book
                 worksheet = writer.sheets[sheet]
 
-                # Format umum
                 fmt_pct = workbook.add_format({'num_format': '#,##0.0"%"'})
-
-                # Format highlight 0%
-                highlight_zero = workbook.add_format({
+                fmt_min = workbook.add_format({
                     "bold": True,
                     "bg_color": "#D9EAD3",
                     "font_color": "#1A5E20",
-                    "num_format": '#,##0.0"%"'
+                    'num_format': '#,##0.0"%"'
                 })
 
-                # Terapkan format persen ke kolom numeric
-                for col_idx, col_name in enumerate(df_to_write.columns):
-                    if "%" in col_name:
-                        worksheet.set_column(col_idx, col_idx, 15, fmt_pct)
+                # ===== WRITE + FORMAT CELL =====
+                for r, row in enumerate(df_to_write.itertuples(index=False), start=1):
+                    numeric_vals = {
+                        i: val for i, val in enumerate(row)
+                        if df_to_write.columns[i] in numeric_cols and pd.notna(val)
+                    }
+                    min_val = min(numeric_vals.values()) if numeric_vals else None
 
-                # Highlight semua nilai 0%
-                for row_idx, row in enumerate(df_to_write.itertuples(index=False), start=1):
-                    for col_idx, val in enumerate(row):
-                        if is_zero_percent(val):
-                            worksheet.write(row_idx, col_idx, val, highlight_zero)
+                    for c, col in enumerate(df_to_write.columns):
+                        val = row[c]
+
+                        if pd.isna(val):
+                            worksheet.write_blank(r, c, None)
+                        elif col in numeric_cols:
+                            fmt = fmt_min if val == min_val else fmt_pct
+                            worksheet.write_number(r, c, val, fmt)
+                        else:
+                            worksheet.write(r, c, val)
+
+                # ===== AUTOFIT (KEEP FORMAT!) =====
+                for i, col in enumerate(df_to_write.columns):
+                    width = max(
+                        len(str(col)),
+                        df_to_write[col].astype(str).map(len).max()
+                    ) + 2
+
+                    worksheet.set_column(
+                        i, i,
+                        width,
+                        fmt_pct if col in numeric_cols else None
+                    )
 
                 continue
 
-            # Default
+            # ========= DEFAULT SHEETS =========
             df.to_excel(writer, index=False, sheet_name=sheet)
             workbook  = writer.book
             worksheet = writer.sheets[sheet]
 
-            fmt_rupiah = workbook.add_format({'num_format': '#,##0'})
-            fmt_pct    = workbook.add_format({'num_format': '#,##0.0"%"'})
+            fmt_rp  = workbook.add_format({'num_format': '#,##0'})
+            fmt_pct = workbook.add_format({'num_format': '#,##0.0"%"'})
 
             numeric_cols = df.select_dtypes(include=["number"]).columns.tolist()
+            pct_cols = [c for c in df.columns if "%" in c]
 
-            for col_idx, col_name in enumerate(df.columns):
-                if col_name in numeric_cols:
-                    worksheet.set_column(col_idx, col_idx, 15, fmt_rupiah)
-                if "%" in col_name:
-                    worksheet.set_column(col_idx, col_idx, 15, fmt_pct)
+            # ===== REWRITE CELLS (SAFE) =====
+            for r, row in enumerate(df.itertuples(index=False), start=1):
+                for c, col in enumerate(df.columns):
+                    val = row[c]
+
+                    if pd.isna(val) or (isinstance(val, float) and np.isinf(val)):
+                        worksheet.write_blank(r, c, None)
+                    elif col in pct_cols:
+                        worksheet.write_number(r, c, val, fmt_pct)
+                    elif col in numeric_cols:
+                        worksheet.write_number(r, c, val, fmt_rp)
+                    else:
+                        worksheet.write(r, c, val)
+
+            # ===== AUTOFIT (KEEP FORMAT!) =====
+            for i, col in enumerate(df.columns):
+                width = max(
+                    len(str(col)),
+                    df[col].astype(str).map(len).max()
+                ) + 2
+
+                if col in pct_cols:
+                    worksheet.set_column(i, i, width, fmt_pct)
+                elif col in numeric_cols:
+                    worksheet.set_column(i, i, width, fmt_rp)
+                else:
+                    worksheet.set_column(i, i, width)
 
     output.seek(0)
     return output.getvalue()
